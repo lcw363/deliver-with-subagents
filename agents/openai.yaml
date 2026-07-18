@@ -1,4 +1,4 @@
 interface:
   display_name: "子会话交付闭环"
-  short_description: "面向已确认需求的开发、测试、Review 与修复闭环"
-  default_prompt: "使用 $deliver-with-subagents 基于已确认需求完成开发、测试、简化、Review 与修复，主会话只保留摘要。"
+  short_description: "以阶段 checkpoint、保守并行和独立审查完成已确认需求交付"
+  default_prompt: "使用 $deliver-with-subagents 完成已确认需求的开发交付。"

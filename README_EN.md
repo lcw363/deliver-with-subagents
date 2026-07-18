@@ -2,23 +2,26 @@
 
 [中文](./README.md) | [English](./README_EN.md)
 
-A context-isolated development delivery skill for Codex. It assigns implementation, testing, and fixes to a single Dev subagent, delegates final review to an independent read-only subagent, and keeps only requirement boundaries, key decisions, and verifiable results in the main conversation.
+A Codex skill for **development delivery after requirements are confirmed**. It isolates implementation details in fresh subagents, creates local unpushed stage checkpoints, schedules sequential and parallel work conservatively, and closes testing, real HTTP verification, independent review, and fix loops.
 
-## Scope and recommended companions
+## Scope
 
-This skill is **only for the development delivery stage after requirements have been agreed**. It covers implementation, testing, independent review, fixes, and re-review. It is not intended for requirements discovery, solution discussion, or scope clarification.
+- Inputs should be a confirmed OpenSpec change, tickets, PRD tasks, or an equally explicit development request.
+- This skill does not perform requirements discovery, solution discussion, or scope clarification. Use **OpenSpec** first to refine requirements, and use **Wayfinder** to define stages and dependencies for large work.
+- It stops for confirmation when an unresolved choice affects business behavior, data, permissions, security, API contracts, or scope.
 
-Before development, use requirements and planning tools as appropriate:
+## Guarantees
 
-- Use **OpenSpec** to capture requirements, acceptance criteria, design decisions, and executable tasks.
-- For large, multi-phase, or multi-session work, use **Wayfinder** to define the route, dependencies, and phase boundaries.
-- Once requirements and scope are confirmed, invoke `$deliver-with-subagents` to run the delivery loop.
-
-If important requirements remain unresolved, return to OpenSpec, Wayfinder, or another requirements discussion process instead of carrying assumptions into production code.
+- Dev, Integrator, and Reviewer use fresh subagents without full-history inheritance. The main conversation retains only key decisions, states, SHAs, and evidence summaries.
+- The skill selects one or more development subtasks and automatically dispatches the next ready node after a node completes.
+- Code-writing work is sequential by default. It runs in parallel only when dependencies, files, contracts, database/fixture/port resources, integration, and rollback are all proven independent. Shared files, unfrozen contracts, or shared data resources force sequential execution.
+- A single Dev writes the target worktree for sequential work. Isolated worktrees and a single Integrator are used only for parallel batches.
+- Every stage creates a local checkpoint commit by default, without pushing, opening a PR, deploying, or archiving. If the user or project forbids commits, the skill uses a sequential snapshot mode.
+- TDD is conditional. The Dev simplifies and self-reviews the implementation before a fixed-checkpoint independent review. Every actionable P0-P3 finding is fixed and re-reviewed.
+- New or changed HTTP APIs are called through the real route with sanitized, representative parameters. Mocks and schema checks do not replace endpoint acceptance.
+- Users may set a timebox or choose no time limit. By default, each Dev closeout, each parallel batch loop, and the final overall closeout receive 60 minutes. Expiry produces `STOPPED_INCOMPLETE`, never a false completion claim.
 
 ## Installation and invocation
-
-Clone the repository into a skill directory discovered by Codex:
 
 ```bash
 mkdir -p ~/.agents/skills
@@ -26,43 +29,32 @@ git clone https://github.com/lcw363/deliver-with-subagents.git \
   ~/.agents/skills/deliver-with-subagents
 ```
 
-Invoke it explicitly in a task:
+Explicit invocation is the most reliable:
 
 ```text
 Use $deliver-with-subagents to complete openspec/changes/add-order-refund, and keep only key conclusions in the main conversation.
 ```
 
-Once installed, Codex may also select the skill automatically when a task matches its description. Explicitly naming `$deliver-with-subagents` makes the intended workflow unambiguous.
+After installation, Codex may also select the skill automatically when a task matches its description.
 
-## Delivery workflow
+## Workflow
 
-1. **Lock the requirements**: Read the user instructions, OpenSpec/PRD/tickets, and project rules. Define acceptance criteria, out-of-scope items, test strategy, and release boundaries. Pause for confirmation when an unresolved choice affects business behavior, data, permissions, security, API contracts, or scope.
-2. **Implement**: Start one Dev subagent as the only code writer. Produce the smallest production-ready implementation, simplify the changed code, and add only necessary comments.
-3. **Test**: Run the narrowest relevant tests first, followed by applicable unit, integration, type, compile, or build checks. Use TDD only when behavior is testable and the public test seam is clear. For bug fixes, prefer a failing regression test before the minimal fix.
-4. **Verify real HTTP APIs**: For a new or changed HTTP API, supplement automated tests by calling the real route on a local service or explicitly authorized test environment with concrete, sanitized parameters. Verify status, response fields, business results, data side effects, and cleanup or rollback. Mark the result `BLOCKED` when the service, credentials, or valid fixtures are unavailable; never present mocks or schema checks as real endpoint acceptance.
-5. **Run independent review**: Do not perform final review in the Dev subagent. Use `$code-review` for a committed branch, or a dedicated uncommitted-changes review/read-only subagent otherwise. Return only actionable findings with severity, location, evidence, impact, and the smallest fix.
-6. **Fix and re-review**: Send confirmed findings back to the same Dev subagent for minimal fixes and regression tests, then run another independent review. Continue until there are no known actionable P0-P3 issues or the applicable timebox expires.
-7. **Report a compressed result**: Keep only requirement status, key files, test and real-API evidence, review/fix outcomes, P0-P3 status, unfinished work, and release state in the main conversation.
+1. Lock requirements, acceptance criteria, tests, and release boundaries.
+2. Build a dependency DAG from independently verifiable stages. Use one Dev for tightly coupled work; split long work and continuously dispatch the next node.
+3. The Dev performs the minimal implementation, conditional TDD, focused tests, code simplification, self-review, and a stage checkpoint.
+4. Run applicable regression/compile/build checks at sequential-stage or integrated-batch closeout. Add real HTTP parameter testing for API changes.
+5. An independent Reviewer inspects a fixed range. Findings return to the single writer for fixes, a new checkpoint, and re-review until pass or timebox closeout.
 
-## Key constraints
+For example, even with checkpoints for stages C/D, shared files, an unfrozen contract, or non-isolated databases or fixtures force sequential execution. A worktree or integration preflight failure also falls back to sequential execution while preserving recovery evidence.
 
-- **Single writer**: Only the Dev subagent may modify code. Review subagents stay read-only to prevent conflicting writes.
-- **Conditional TDD**: TDD is not mandatory for every change. Use it when the test seam is clear; for bug fixes, prefer adding a reproduction test first. Confirm before choosing a test seam that would materially change the design.
-- **Publishing is off by default**: Do not commit, push, open a PR, deploy, or archive an OpenSpec change unless the user explicitly requests it.
-- **Findings must be closed**: P0-P3 findings require a concrete failure path and an actionable fix. Pure style preferences are not P3 issues. Confirmed findings must be fixed and reviewed again.
-- **Configurable closeout timebox**: Use the duration specified by the user. If none is provided, default to 60 minutes starting when the first implementation is complete. The user may choose another duration or explicitly request no time limit. When the applicable timebox expires, stop modifying the code and list unfinished work, unverified items, blockers, and residual risks. No time limit never overrides confirmation, permission, security, or environment boundaries.
-- **Real testing has safety boundaries**: Pass tokens through environment variables, sanitize credentials and personal data, represent 64-bit JSON IDs as strings, and never access production or use irreversible production data without explicit authorization.
-
-## Short example
+## Example
 
 ```text
-Use $deliver-with-subagents to implement the OpenSpec change `add-order-refund`:
-- Implement only Phase 1 from tasks.md.
-- After adding the refund API, call the local HTTP route with a test merchant and order ID.
-- Let the Dev subagent implement, simplify, test, and fix; use an independent subagent for review.
-- Keep only key decisions, test evidence, and P0-P3 status in the main conversation.
-- Use a 90-minute closeout timebox for review, fixes, and re-review.
-- Do not commit, push, or deploy. Stop for confirmation if an unresolved choice affects refund amounts or permissions.
+Use $deliver-with-subagents to deliver the 10 confirmed Wayfinder development stages:
+- infer dependencies and keep dispatching the next task; stay sequential unless modules are fully independent;
+- create an unpushed local checkpoint commit after each stage;
+- call new endpoints on the local service with a test account and real order parameters;
+- run a final independent review and close all P0-P3 findings; list unfinished work if the timebox expires.
 ```
 
-See [SKILL.md](./SKILL.md) for the complete execution rules.
+See [SKILL.md](./SKILL.md) for the complete rules, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.
