@@ -1,9 +1,9 @@
 ---
-name: deliver-with-subagents
+name: subagent-delivery
 description: 用于已确认需求、OpenSpec change 或 tickets 的隔离子会话开发交付；不用于需求发现、方案讨论或范围澄清。包含测试、独立 Review 与修复闭环。
 ---
 
-# Deliver with Subagents
+# Subagent Delivery
 
 只在需求与验收边界已经确认后使用。主会话负责锁定范围、调度、状态与最终结论；Dev、Integrator、Reviewer 使用不继承完整历史的全新子会话，只接收完成当前职责所需的精简简报。
 

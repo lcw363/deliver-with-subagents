@@ -1,4 +1,4 @@
 interface:
-  display_name: "子会话交付闭环"
+  display_name: "子会话交付"
   short_description: "以阶段 checkpoint、保守并行和独立审查完成已确认需求交付"
-  default_prompt: "使用 $deliver-with-subagents 完成已确认需求的开发交付。"
+  default_prompt: "使用 $subagent-delivery 完成已确认需求的开发交付。"

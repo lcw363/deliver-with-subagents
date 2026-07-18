@@ -1,4 +1,4 @@
-# deliver-with-subagents
+# subagent-delivery
 
 [中文](./README.md) | [English](./README_EN.md)
 
@@ -26,14 +26,14 @@ A Codex skill for **development delivery after requirements are confirmed**. It 
 
 ```bash
 mkdir -p ~/.agents/skills
-git clone https://github.com/lcw363/deliver-with-subagents.git \
-  ~/.agents/skills/deliver-with-subagents
+git clone https://github.com/lcw363/subagent-delivery.git \
+  ~/.agents/skills/subagent-delivery
 ```
 
 Explicit invocation is the most reliable:
 
 ```text
-Use $deliver-with-subagents to complete openspec/changes/add-order-refund, and keep only key conclusions in the main conversation.
+Use $subagent-delivery to complete openspec/changes/add-order-refund, and keep only key conclusions in the main conversation.
 ```
 
 After installation, Codex may also select the skill automatically when a task matches its description.
@@ -51,7 +51,7 @@ For example, even with checkpoints for stages C/D, shared files, an unfrozen con
 ## Example
 
 ```text
-Use $deliver-with-subagents to deliver the 10 confirmed Wayfinder development stages:
+Use $subagent-delivery to deliver the 10 confirmed Wayfinder development stages:
 - infer dependencies and keep dispatching the next task; stay sequential unless modules are fully independent;
 - create an unpushed local checkpoint commit after each stage;
 - call new endpoints on the local service with a test account and real order parameters;

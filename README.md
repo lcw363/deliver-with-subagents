@@ -1,4 +1,4 @@
-# deliver-with-subagents
+# subagent-delivery
 
 [中文](./README.md) | [English](./README_EN.md)
 
@@ -26,14 +26,14 @@
 
 ```bash
 mkdir -p ~/.agents/skills
-git clone https://github.com/lcw363/deliver-with-subagents.git \
-  ~/.agents/skills/deliver-with-subagents
+git clone https://github.com/lcw363/subagent-delivery.git \
+  ~/.agents/skills/subagent-delivery
 ```
 
 显式调用最可靠：
 
 ```text
-请使用 $deliver-with-subagents 完成 openspec/changes/add-order-refund，主会话只保留关键结论。
+请使用 $subagent-delivery 完成 openspec/changes/add-order-refund，主会话只保留关键结论。
 ```
 
 安装后，Codex 在任务匹配 Skill 描述时也可能自动选择它。
@@ -51,7 +51,7 @@ git clone https://github.com/lcw363/deliver-with-subagents.git \
 ## 示例
 
 ```text
-请使用 $deliver-with-subagents 交付 Wayfinder 中已确认的 10 个开发阶段：
+请使用 $subagent-delivery 交付 Wayfinder 中已确认的 10 个开发阶段：
 - 自动判断阶段依赖并持续启动下一任务；除非模块完全独立，否则串行；
 - 每阶段自动创建本地 checkpoint commit，但不 push、不部署；
 - 新增接口使用测试账号和实际订单参数调用本地 HTTP 路由；
