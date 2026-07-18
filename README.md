@@ -7,12 +7,13 @@
 ## 适用范围
 
 - 输入应是已确认的 OpenSpec change、tickets、PRD tasks 或明确开发需求。
-- 本 Skill 不负责需求发现、方案讨论或范围澄清。开始开发前建议先用 **OpenSpec** 完善需求；大型多阶段任务先用 **Wayfinder** 明确阶段和依赖。
+- 本 Skill 不负责需求发现、方案讨论或范围澄清。建议先用当前最强推理档配合 **OpenSpec** 完善需求；大型多阶段任务先用 **Wayfinder** 明确阶段和依赖，再进入本 Skill。
 - 仍有影响业务、数据、权限、安全、API 契约或范围的关键歧义时，会停下等待确认。
 
 ## 核心保障
 
 - Dev、Integrator、Reviewer 使用不继承完整历史的 fresh 子会话；主会话只保留关键决策、状态、SHA 和证据摘要。
+- 模型按角色和风险动态选择：常规 Dev 优先较快的均衡档，Integrator、独立 Reviewer 和高风险/重复失败任务使用当前最强档；不绑定具体模型版本，用户可覆盖。
 - 自动选择一个或多个开发子任务，并在节点完成后自动启动下一 ready 节点。
 - 写入默认串行。只有依赖、文件、契约、数据库/fixture/端口、集成和回滚均可证明独立时才并行；共享文件、未冻结契约或共享数据资源一律串行。
 - 串行任务由唯一 Dev 直接写目标工作区；只有并行批次才使用隔离 worktree 和唯一 Integrator。
@@ -57,4 +58,4 @@ git clone https://github.com/lcw363/deliver-with-subagents.git \
 - 最终独立 Review 并闭环 P0-P3；无法在时限内完成时列出未完成清单。
 ```
 
-完整规则见 [SKILL.md](./SKILL.md)；恢复协议见 [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md)，简报与测试证据见 [evidence-and-briefs.md](./references/evidence-and-briefs.md)。
+完整规则见 [SKILL.md](./SKILL.md)；恢复协议见 [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md)，模型策略见 [model-routing.md](./references/model-routing.md)，简报与测试证据见 [evidence-and-briefs.md](./references/evidence-and-briefs.md)。

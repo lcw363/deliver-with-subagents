@@ -21,7 +21,8 @@ description: 用于已确认需求、OpenSpec change 或 tickets 的隔离子会
 1. 按“用户当前指令 > 已确认 spec/tickets > 项目规则 > 现有行为”确定范围；记录验收标准、不做内容、风险、测试与发布边界。
 2. 有 OpenSpec 时先验证 change。只有当前任务授权维护 artifact 或项目流程明确要求时，才修复机械性的结构错误；任何语义、范围、验收标准变化都必须先确认。仅在被授权时更新 task 状态。
 3. 在生成 DAG 或派发任何 writer 前，完整读取 [checkpoint-and-recovery.md](references/checkpoint-and-recovery.md)，检查 dirty 状态并固定 `COMMIT_MODE`、任务前基线和恢复方式；再记录用户指定的单任务、串行/并行、环境、真实接口与时限要求。
-4. 形成精简交付简报，禁止把整段主会话历史复制给子会话。未指定的行为使用本 Skill 默认值。
+4. 派发任何子会话前，完整读取 [model-routing.md](references/model-routing.md)，按角色、风险和当前实际可用能力解析模型与推理强度；用户覆盖优先，不硬编码具体模型版本。
+5. 形成精简交付简报，禁止把整段主会话历史复制给子会话。未指定的行为使用本 Skill 默认值。
 
 完成标准：需求输入、验收边界、发布权限和待确认项足以让 Dev 独立执行。
 
@@ -64,7 +65,7 @@ Dev 必须：
 3. 最后一次批次 Review 明确覆盖全部累计 diff 与整体调用链时，可同时作为最终 Review。
 4. 优先使用只读 custom Reviewer，并在 fixed point 明确时使用 `$code-review` 或等价审查。不可用时，Review 前后核对规范化 workspace diff/内容指纹；发生非预期变化则该 Review 无效。
 5. 严重度：P0 为灾难性数据、安全或全局可用性事故；P1 为阻断核心需求、主流程或发布；P2 为重要场景的真实正确性、兼容性或可靠性问题；P3 为低影响但可复现、应在当前范围修复的局部缺陷。纯风格偏好或无失败路径的建议不是 P3。
-6. 成立问题交给唯一 writer：单任务交回原 Dev，串行跨阶段问题交给当前目标 Dev，合并前问题交给对应并行 Dev，批次/跨任务/整体问题交给 Integrator。修复后重跑相关测试、创建新 checkpoint，并让独立 Reviewer 审查新的 fixed point，禁止在旧结论上口头关闭。
+6. 成立问题交给唯一 writer：单任务交回原 Dev，串行跨阶段问题交给当前目标 Dev，合并前问题交给对应并行 Dev，批次/跨任务/整体问题交给 Integrator。若模型升级需要替换子会话，先停止旧 writer，固定并核对 checkpoint/workspace，记录新的 lease owner 后才启动 fresh writer。修复后重跑相关测试、创建新 checkpoint，并让独立 Reviewer 审查新的 fixed point，禁止在旧结论上口头关闭。
 
 ## 5. 时限与完成
 

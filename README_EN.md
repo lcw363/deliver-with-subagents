@@ -7,12 +7,13 @@ A Codex skill for **development delivery after requirements are confirmed**. It 
 ## Scope
 
 - Inputs should be a confirmed OpenSpec change, tickets, PRD tasks, or an equally explicit development request.
-- This skill does not perform requirements discovery, solution discussion, or scope clarification. Use **OpenSpec** first to refine requirements, and use **Wayfinder** to define stages and dependencies for large work.
+- This skill does not perform requirements discovery, solution discussion, or scope clarification. First use the strongest current reasoning tier with **OpenSpec** to refine requirements; for large work, use **Wayfinder** to define stages and dependencies before entering this skill.
 - It stops for confirmation when an unresolved choice affects business behavior, data, permissions, security, API contracts, or scope.
 
 ## Guarantees
 
 - Dev, Integrator, and Reviewer use fresh subagents without full-history inheritance. The main conversation retains only key decisions, states, SHAs, and evidence summaries.
+- Models are selected dynamically by role and risk: normal Dev work favors the faster balanced tier, while Integrator, independent Reviewer, and high-risk or repeatedly failing work use the strongest current tier. No concrete model version is pinned, and users may override the policy.
 - The skill selects one or more development subtasks and automatically dispatches the next ready node after a node completes.
 - Code-writing work is sequential by default. It runs in parallel only when dependencies, files, contracts, database/fixture/port resources, integration, and rollback are all proven independent. Shared files, unfrozen contracts, or shared data resources force sequential execution.
 - A single Dev writes the target worktree for sequential work. Isolated worktrees and a single Integrator are used only for parallel batches.
@@ -57,4 +58,4 @@ Use $deliver-with-subagents to deliver the 10 confirmed Wayfinder development st
 - run a final independent review and close all P0-P3 findings; list unfinished work if the timebox expires.
 ```
 
-See [SKILL.md](./SKILL.md) for the complete rules, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.
+See [SKILL.md](./SKILL.md) for the complete rules, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, [model-routing.md](./references/model-routing.md) for model policy, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.
