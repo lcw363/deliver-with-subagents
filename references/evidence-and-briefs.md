@@ -7,18 +7,21 @@
 每个子会话只接收：
 
 - `task_id`、角色、目标和输入来源；
-- 范围、明确不做内容、验收标准和风险；
+- `scope_allowlist`（逐类记录允许改变的行为、API/字段 contract、权限、数据及副作用、schema/迁移、依赖和获准的局部重构；未获准类别为 `none`）、明确不做内容、验收标准和风险；
 - 文件/模块所有权、依赖、固定基线 SHA 或 snapshot；
 - 测试层级、真实 HTTP 要求、环境与副作用边界；
 - 模型角色层级、实际选用模型（可见时）、推理强度、选择/升级原因和 fallback；
-- `COMMIT_MODE`、checkpoint 规则、timer key、绝对 `deadline_at` 和发布权限；
+- `COMMIT_MODE`、checkpoint 规则、timer key、绝对 `deadline_at`（默认节点时钟尚未触发时为 `PENDING_FIRST_IMPLEMENTATION`）和发布权限；
+- 首次派发时的 `LONG_STAGE`、`planned_rotation_checkpoint`、`context_epoch=0`、`compression_count=0|UNKNOWN`、`rotation_count=0`；接力派发时继承这些字段、换班原因、交接 artifact 路径/hash 和剩余 deadline；
 - 必要项目规则与已确认决策，不附整段聊天或其他节点完整日志。
 
-Dev 返回：节点状态、改动摘要、关键文件、简化/注释、自检、测试与 HTTP 摘要、checkpoint 状态/SHA/artifact 路径、未完成项、阻塞和风险。
+Dev 返回：节点状态、改动摘要、关键文件、每项改动对应的需求或最小支撑理由、简化/注释、自检、测试与 HTTP 摘要、checkpoint 状态/SHA/artifact 路径、未完成项、阻塞和风险；没有未授权范围扩张时明确记录 `SCOPE_OK`。
+
+上下文换班时，旧 Dev 额外返回 `HANDOFF_READY`、换班原因、`context_epoch`/`compression_count`/`rotation_count`、固定 checkpoint、交接 artifact 路径/hash 和 workspace 状态；主任务记录旧 Dev 退休、writer lease 释放与新 owner，新 Dev 返回对交接字段的核对结果。详细格式见 [context-rotation.md](context-rotation.md)。
 
 Integrator 额外返回：消费的 `TASK_SHA` 顺序、冲突或范围核对、批次测试、`INTEGRATION_SHA`、未集成节点与目标 workspace 状态。
 
-Reviewer 输入必须固定：验收标准、审查范围、base/head SHA 或不可变 snapshot、项目规则、必要测试证据。输出记录 `code_checkpoint` 和审查范围，只包含 P0-P3 finding（等级、紧凑行号、失败路径、影响、最小修复建议）、测试缺口、残余风险和 workspace 前后无变化证据；没有只读 custom agent 时，前后证据覆盖 HEAD、staged/unstaged patch、范围内 untracked 路径/模式/内容 hash 和 submodule 状态。没有问题时明确写明审查范围与“未发现已知且可执行的 P0-P3 问题”。
+Reviewer 输入必须固定：`scope_allowlist`、明确不做内容、验收标准、审查范围、base/head SHA 或不可变 snapshot、项目规则、必要测试证据。输出记录 `code_checkpoint` 和审查范围，只包含 P0-P3 finding（等级、紧凑行号、失败路径、影响、最小修复建议）、范围扩张、测试缺口、残余风险和 workspace 前后无变化证据；存在未授权范围扩张时不得输出 `SCOPE_OK` 或 `REVIEW_PASS`。没有只读 custom agent 时，前后证据覆盖 HEAD、staged/unstaged patch、范围内 untracked 路径/模式/内容 hash 和 submodule 状态。没有问题时明确写明审查范围、`SCOPE_OK` 与“未发现已知且可执行的 P0-P3 问题”。
 
 任何原因产生后续代码 checkpoint 时，只要改动落入原审查范围或相关调用链，旧 `REVIEW_PASS` 立即变为 `REVIEW_STALE` 并必须复查；只有能以 diff 和调用链证明后续改动无关时才可保留。最终 `REVIEW_PASS` 必须对最终 fixed point 有效。
 

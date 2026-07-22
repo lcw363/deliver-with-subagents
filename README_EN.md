@@ -13,14 +13,16 @@ A Codex skill for **development delivery after requirements are confirmed**. It 
 ## Guarantees
 
 - Dev, Integrator, and Reviewer use fresh subagents without full-history inheritance. The main conversation retains only key decisions, states, SHAs, and evidence summaries.
-- Models are selected dynamically by role and risk: normal Dev work favors the faster balanced tier, while Integrator, independent Reviewer, and high-risk or repeatedly failing work use the strongest current tier. No concrete model version is pinned, and users may override the policy.
+- Confirmed requirements are the write-scope ceiling. Implement only accepted behavior and inseparable minimal support; do not add adjacent features, contracts, migrations, or unrelated refactors without confirmation.
+- Every stage starts with a fresh Dev by default. Long stages predeclare safe checkpoint rotation points and use structured handoffs so multiple fresh Devs can continue the same development node sequentially; the old Dev is then retired.
+- The main task always keeps its current model, while subtasks choose between that model and an available one-tier-lower model according to complexity. Reasoning defaults to `medium`; Integrator, independent Reviewer, and complex or high-risk work require `high`. If `high` is unavailable, the affected node pauses for confirmation instead of silently degrading or upgrading models. Only an explicitly named reasoning level overrides these defaults.
 - The skill selects one or more development subtasks and automatically dispatches the next ready node after a node completes.
 - Code-writing work is sequential by default. It runs in parallel only when dependencies, files, contracts, database/fixture/port resources, integration, and rollback are all proven independent. Shared files, unfrozen contracts, or shared data resources force sequential execution.
-- A single Dev writes the target worktree for sequential work. Isolated worktrees and a single Integrator are used only for parallel batches.
+- Exactly one active Dev writes the target worktree at a time during sequential work. Isolated worktrees and a single Integrator are used only for parallel batches.
 - Every stage creates a local checkpoint commit by default, without pushing, opening a PR, deploying, or archiving. If the user or project forbids commits, the skill uses a sequential snapshot mode.
 - TDD is conditional. The Dev simplifies and self-reviews the implementation before a fixed-checkpoint independent review. Every actionable P0-P3 finding is fixed and re-reviewed.
 - New or changed HTTP APIs are called through the real route with sanitized, representative parameters. Mocks and schema checks do not replace endpoint acceptance.
-- Users may set a timebox or choose no time limit. By default, each Dev closeout, each parallel batch loop, and the final overall closeout receive 60 minutes. Expiry produces `STOPPED_INCOMPLETE`, never a false completion claim.
+- Users may set a timebox or choose no time limit. By default, each implementation-node closeout, each parallel batch loop, and the final overall closeout receive 60 minutes. Rotating Devs within a stage does not reset that clock; expiry produces `STOPPED_INCOMPLETE`, never a false completion claim.
 
 ## Installation and invocation
 
@@ -41,10 +43,11 @@ After installation, Codex may also select the skill automatically when a task ma
 ## Workflow
 
 1. Lock requirements, acceptance criteria, tests, and release boundaries.
-2. Build a dependency DAG from independently verifiable stages. Use one Dev for tightly coupled work; split long work and continuously dispatch the next node.
+2. Build a dependency DAG from independently verifiable stages. Start each stage with a fresh Dev by default; tightly coupled small stages may share one Dev, while long stages predeclare safe checkpoint rotation points.
 3. The Dev performs the minimal implementation, conditional TDD, focused tests, code simplification, self-review, and a stage checkpoint.
-4. Run applicable regression/compile/build checks at sequential-stage or integrated-batch closeout. Add real HTTP parameter testing for API changes.
-5. An independent Reviewer inspects a fixed range. Findings return to the single writer for fixes, a new checkpoint, and re-review until pass or timebox closeout.
+4. Rotate proactively when a long stage reaches a planned checkpoint. Prepare a handoff on the first observable compaction, and rotate early on the second observable compaction or a failed context-health check. The fresh Dev remains read-only until verification; the original node and deadline remain unchanged.
+5. Run applicable regression/compile/build checks at sequential-stage or integrated-batch closeout. Add real HTTP parameter testing for API changes.
+6. An independent Reviewer inspects a fixed range. Findings return to the single writer for fixes, a new checkpoint, and re-review until pass or timebox closeout.
 
 For example, even with checkpoints for stages C/D, shared files, an unfrozen contract, or non-isolated databases or fixtures force sequential execution. A worktree or integration preflight failure also falls back to sequential execution while preserving recovery evidence.
 
@@ -58,4 +61,4 @@ Use $subagent-delivery to deliver the 10 confirmed Wayfinder development stages:
 - run a final independent review and close all P0-P3 findings; list unfinished work if the timebox expires.
 ```
 
-See [SKILL.md](./SKILL.md) for the complete rules, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, [model-routing.md](./references/model-routing.md) for model policy, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.
+See [SKILL.md](./SKILL.md) for the complete rules, [context-rotation.md](./references/context-rotation.md) for context rotation, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, [model-routing.md](./references/model-routing.md) for model policy, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.

@@ -25,7 +25,7 @@
 
 ## 串行与并行
 
-- 正常串行：唯一 Dev 直接写目标工作区；阶段验证通过后创建并核对 stage checkpoint，完成后才达到 `DEV_PASS`。下一个 Dev 从该最新目标状态启动，不创建 Integrator。
+- 正常串行：任一时刻由唯一活跃 Dev 直接写目标工作区；阶段内可按上下文协议换班，但不创建 Integrator。阶段验证通过后创建并核对 stage checkpoint，完成后才达到 `DEV_PASS`；后继节点从该最新目标状态启动。
 - 正常并行：先固定 `BASE_SHA`，每个 Dev 使用独立 worktree 和本地 `codex/delivery-*` branch/ref，且只写自己的所有权范围。focused tests 和 task commit 完成后返回固定 `TASK_SHA` 并达到 `DEV_READY`。
 - Integrator 获取目标工作区独占 writer lease，按依赖顺序消费固定 `TASK_SHA`，核对父 SHA 与写入范围，运行批次验证并创建 integration checkpoint；独立 batch Review/fix loop 对最新 checkpoint 通过后，相关节点才达到 `DEV_PASS`。
 - 并行 task ref 和 worktree 保留到集成、Review 与修复结束。只有确认干净且不再用于恢复时才清理 worktree；本地 checkpoint/ref 默认保留并在最终报告列出。
@@ -43,6 +43,7 @@
 
 - 已经运行的子会话不会自动加载新版 Skill。让当前 writer 到达最近的安全 checkpoint 边界；从下一节点启动 fresh 子会话并读取最新版规则。若旧规则会破坏单写者、数据或发布边界，立即停止受影响 writer并保存恢复证据。
 - 版本切换 checkpoint 要记录当前 Skill 版本/来源、writer lease、commit 模式、固定 ref、artifact 路径和下一 DAG 状态；不要在漂移中的阶段切换审查基线。
+- 因上下文健康触发的阶段内换班也必须先固定并核对 checkpoint/snapshot，且继承原 timer key 和绝对 deadline；默认节点时钟尚未触发时继承 `PENDING_FIRST_IMPLEMENTATION`。换班细节遵循 `context-rotation.md`，不能借此重置阶段或 Dev 收口时钟。
 - 回退前检查依赖该 checkpoint 的后续阶段。`auto` 模式按反向依赖顺序优先创建可审计的 revert commit；`disabled` 模式使用保存的反向 patch。未经明确授权不执行破坏性 reset、rebase 或强制清理。
 
 完成标准：每个交接点都有可定位、可核验、可恢复的固定状态，且没有把无关改动或敏感内容带入 checkpoint。

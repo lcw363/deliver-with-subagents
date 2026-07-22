@@ -10,31 +10,33 @@ description: 用于已确认需求、OpenSpec change 或 tickets 的隔离子会
 ## 不可变门禁
 
 - 若业务规则、数据、权限、安全、API 契约或范围仍有关键歧义，停止受影响节点，返回 OpenSpec、Wayfinder 或用户确认，不把猜测写进生产代码。
+- 把已确认需求视为写入范围上限：只实现验收所需行为及不可分离的最小支撑改动。最小支撑必须同时满足“不产生独立可见的产品行为/contract/权限/数据副作用/依赖变化”和“不做就无法满足当前验收”；不满足任一条件即属额外范围。未经确认不新增相邻功能、接口/字段/状态、权限、schema/迁移、依赖、兼容分支或重构清理；不影响当前交付的列入不做清单，确为验收必需的只暂停受影响节点并请求确认。
 - 支持时以 `fork_turns: "none"` 启动 fresh Dev、Integrator、Reviewer；主会话只保留决策、状态、固定 SHA、证据摘要和未决项。
-- 同一工作区同一时刻只有一个 writer。纯串行任务由唯一 Dev 直接写目标工作区，不创建 Integrator；只有并行批次才由唯一 Integrator 写目标工作区。Reviewer 始终只读。
+- 同一工作区同一时刻只有一个 writer。纯串行任务任一时刻由唯一活跃 Dev 直接写目标工作区，阶段内允许按协议换班但不创建 Integrator；只有并行批次才由唯一 Integrator 写目标工作区。Reviewer 始终只读。
 - 写入任务默认串行。只有依赖、写入文件、共享契约、数据库/fixture/端口等资源、集成与回滚都能证明独立时才并行；“不同模块”或“已有 checkpoint”本身不构成证明。
 - 默认每阶段创建本地 checkpoint commit，但不等于发布授权。除非用户明确要求，不 push、不建 PR、不部署、不归档，也不 rebase、squash、reset 或清理 checkpoint。
 - Dev 自检不能替代独立 Review。所有成立且可执行的 P0-P3 问题都要修复并对新 fixed point 复查。
 
 ## 1. 锁定输入
 
-1. 按“用户当前指令 > 已确认 spec/tickets > 项目规则 > 现有行为”确定范围；记录验收标准、不做内容、风险、测试与发布边界。
+1. 按“用户当前指令 > 已确认 spec/tickets > 项目规则 > 现有行为”确定范围；形成 `scope_allowlist`，逐类记录允许改变的行为、API/字段 contract、权限、数据及副作用、schema/迁移、依赖和获准的局部重构，未获准类别明确为 `none`；同时记录验收标准、明确不做内容、风险、测试与发布边界。
 2. 有 OpenSpec 时先验证 change。只有当前任务授权维护 artifact 或项目流程明确要求时，才修复机械性的结构错误；任何语义、范围、验收标准变化都必须先确认。仅在被授权时更新 task 状态。
 3. 在生成 DAG 或派发任何 writer 前，完整读取 [checkpoint-and-recovery.md](references/checkpoint-and-recovery.md)，检查 dirty 状态并固定 `COMMIT_MODE`、任务前基线和恢复方式；再记录用户指定的单任务、串行/并行、环境、真实接口与时限要求。
-4. 派发任何子会话前，完整读取 [model-routing.md](references/model-routing.md)，按角色、风险和当前实际可用能力解析模型与推理强度；用户覆盖优先，不硬编码具体模型版本。
+4. 派发任何子会话前，完整读取 [model-routing.md](references/model-routing.md)：主任务沿用当前模型，子任务按复杂度在当前模型与低一级模型之间选择；推理强度默认 `medium`，Integrator、Reviewer 和复杂/高风险任务使用 `high`，用户明确点名的档位优先，不硬编码具体模型版本。
 5. 形成精简交付简报，禁止把整段主会话历史复制给子会话。未指定的行为使用本 Skill 默认值。
 
 完成标准：需求输入、验收边界、发布权限和待确认项足以让 Dev 独立执行。
 
 ## 2. 拆分与调度
 
-1. 用户指定只用一个 Dev、不要拆分或不要并行时直接遵循。目标紧密耦合时也使用一个 Dev。
-2. 只有存在可独立验收的阶段或单个上下文难以稳定容纳时才拆分；优先复用已确认的 OpenSpec/Wayfinder 阶段，不拆无独立价值的机械步骤。
+1. 用户指定只用一个开发节点/任务、不要拆分或不要并行时直接遵循；同一节点仍可按协议更换 fresh Dev。用户指定只用一个 Dev/子会话时禁止换班；只说“一个”而未明确单位时按单一子会话处理，命中强制换班条件则 `BLOCKED` 等待确认。
+2. 只有存在可独立验收的阶段或单个上下文难以稳定容纳时才拆分；优先复用已确认的 OpenSpec/Wayfinder 阶段，不拆无独立价值的机械步骤。每个阶段默认从 fresh Dev 开始；仅当相邻小阶段紧密耦合且能明确证明一个上下文可稳定容纳时才共用 Dev。阶段若在完成前包含至少两个顺序、可验证的安全 checkpoint，或已被 spec/Wayfinder 标为大型阶段，则标记 `LONG_STAGE` 并预设阶段内换班点；暂时找不到安全边界时记为 `PENDING_SAFE_BOUNDARY`，不新增开发节点。
 3. 共享文件、未冻结 API/DTO/schema/核心抽象、共享数据库或 fixture、迁移顺序、不可隔离环境任一存在时，建立顺序边。先串行冻结共享契约，再重新评估后续任务。
 4. 对满足全部并行白名单的 ready 节点，可用隔离 worktree 并行；只读分析、测试设计和只读审计在不争用环境时可更积极并行。worktree 能力失败则保留证据并自动回退串行。
 5. 主任务维护依赖 DAG 和 ready queue：一个节点结束后自动启动下一 ready 节点；多个 ready 节点仅在白名单成立时并行。局部 `FAIL`/`BLOCKED` 只阻塞该节点及其依赖。
 6. 并行时发现文件或语义重叠，停止后启动的冲突 writer，保存 checkpoint；先集成前一个结果，再从最新目标 checkpoint 串行重启受影响任务，不让主会话硬合并语义冲突。
 7. MySQL、Docker、第三方 Test Mode、测试账号和 fixture 仅在已授权、非生产、资源隔离且副作用可回滚时作为环境节点提前并行；环境就绪不等于接口验收通过。
+8. 一个阶段同一时刻仍只有一个 writer，但可由多个 fresh Dev 串行接力。派发 `LONG_STAGE` 前或运行中出现上下文压缩、重复取证、范围增长等信号时，完整读取 [context-rotation.md](references/context-rotation.md)；达到预设安全换班点且仍有实质工作，或命中其强制健康条件时执行 checkpoint、交接和退休。换班不解锁依赖，也不重置任务 ID、验收标准或 deadline。
 
 状态含义：
 
@@ -44,6 +46,7 @@ description: 用于已确认需求、OpenSpec change 或 tickets 的隔离子会
 - HTTP acceptance 状态：`HTTP_PASS`、`HTTP_FAIL`、`HTTP_BLOCKED`、`HTTP_STALE` 或 `HTTP_NOT_APPLICABLE`；它与代码、Review 状态分别记录。
 - `FAIL` / `BLOCKED`：实现或验证失败，或缺少继续所需的权限、环境、凭据、fixture、用户决定。
 - `STOPPED_INCOMPLETE`：达到时限后收口，仍有未完成项；它不是通过或完成状态。
+- `HANDOFF_READY`：当前 writer 已停止新增写入，固定 checkpoint/snapshot 和交接 artifact 已核验，可安全切换 fresh writer；它不是阶段通过状态。
 
 ## 3. 开发、测试与 checkpoint
 
@@ -51,7 +54,7 @@ description: 用于已确认需求、OpenSpec change 或 tickets 的隔离子会
 
 Dev 必须：
 
-- 完成最小生产可用实现，不扩大范围，不修改无关 contract；只在兼容且可用时调用其他 Skill，不因缺失而降低交付标准。
+- 完成最小生产可用实现，不扩大范围，不修改无关 contract；每项代码、配置、依赖和数据变更都必须能直接追溯到 `scope_allowlist` 或不可分离的最小支撑，无法说明必要性就不修改。只在兼容且可用时调用其他 Skill，不因缺失而降低交付标准。
 - 测试缝和预期行为清晰时使用 `$tdd`；Bug 修复优先先写能复现问题的回归测试。测试缝会改变设计时先确认，否则按最小实现加事后测试并说明原因。
 - 开发中跑 focused tests。实现后用 `$code-simplifier` 或等价规则简化本次改动，补充只解释关键“为什么”的注释，重跑受影响测试，再做需求遗漏、异常路径、测试缺口与复杂度自检。
 - 串行阶段收口或并行批次集成后只运行一次适用的受影响回归、类型检查、编译或构建；最终验证只补尚未覆盖的整体验证，避免机械重复重测试。
@@ -60,17 +63,17 @@ Dev 必须：
 
 ## 4. 独立 Review 与修复
 
-1. 单任务或纯串行链只在全部实现与可执行自动化测试完成后做一次最终独立 Review；HTTP acceptance 状态单独记录，不阻止代码 Review 形成独立结论。
+1. 单任务或纯串行链只在全部实现与可执行自动化测试完成后进入一个最终独立 Review/fix loop；每次修复形成新 fixed point 后继续独立复查。HTTP acceptance 状态单独记录，不阻止代码 Review 形成独立结论。
 2. 并行任务必须在 Integrator 合并、批次验证和 batch checkpoint 后做独立 Review；该 Review/fix loop 通过后批次才达到 `DEV_PASS` 并解锁后继。只有资金、权限、安全、迁移、并发、共享核心契约、难回滚副作用或大型子任务才增加合并前 Review。
 3. 最后一次批次 Review 明确覆盖全部累计 diff 与整体调用链时，可同时作为最终 Review。
-4. 优先使用只读 custom Reviewer，并在 fixed point 明确时使用 `$code-review` 或等价审查。不可用时，Review 前后核对规范化 workspace diff/内容指纹；发生非预期变化则该 Review 无效。
-5. 严重度：P0 为灾难性数据、安全或全局可用性事故；P1 为阻断核心需求、主流程或发布；P2 为重要场景的真实正确性、兼容性或可靠性问题；P3 为低影响但可复现、应在当前范围修复的局部缺陷。纯风格偏好或无失败路径的建议不是 P3。
-6. 成立问题交给唯一 writer：单任务交回原 Dev，串行跨阶段问题交给当前目标 Dev，合并前问题交给对应并行 Dev，批次/跨任务/整体问题交给 Integrator。若模型升级需要替换子会话，先停止旧 writer，固定并核对 checkpoint/workspace，记录新的 lease owner 后才启动 fresh writer。修复后重跑相关测试、创建新 checkpoint，并让独立 Reviewer 审查新的 fixed point，禁止在旧结论上口头关闭。
+4. 优先使用只读 custom Reviewer，并在 fixed point 明确时使用 `$code-review` 或等价审查。Reviewer 必须把全部 diff 与 `scope_allowlist`、明确不做内容逐项核对；任何已经写入的未确认行为、contract、权限、schema/迁移、依赖或无关重构本身就是可复现的范围缺陷，至少列为 P3，并按实际影响提高等级；在移除或获得确认前不得给出 `SCOPE_OK` 或 `REVIEW_PASS`。不可用时，Review 前后核对规范化 workspace diff/内容指纹；发生非预期变化则该 Review 无效。
+5. 严重度：P0 为灾难性数据、安全或全局可用性事故；P1 为阻断核心需求、主流程或发布；P2 为重要场景的真实正确性、兼容性或可靠性问题；P3 为低影响但可复现、应在当前范围修复的局部缺陷。未实际写入的纯风格偏好或无失败路径建议不是 P3；已经写入的未授权范围扩张按上一条处理。
+6. 成立问题交给当前 writer lease owner；当前 writer 已退休或不存在时，从最新 fixed point 按交接协议创建 fresh Fixer，禁止重新激活退休会话。合并前问题仍归对应任务，批次/跨任务/整体问题仍归 Integrator 职责。替换 writer 时依次停止旧 writer、固定 checkpoint/workspace、完成交接、退休并释放 lease，再启动只读 fresh replacement；其核验通过后才记录新 lease owner 并授权写入。修复后重跑相关测试、创建新 checkpoint，并让独立 Reviewer 审查新的 fixed point，禁止在旧结论上口头关闭。
 
 ## 5. 时限与完成
 
 - 用户可指定总时限、阶段时限或不限时。指定时限是硬上限；调度时固定绝对 `deadline_at`，每个子会话使用“用户总时限剩余值”和当前节点时限中的较早者，禁止自行重置。
-- 未指定时，每个 Dev 的收口时钟从第一版功能实现完成起算，每个并行批次时钟从 Integrator 收到首个固定 `TASK_SHA` 起算，最终时钟从全部实现节点已通过或阻塞并进入整体收口起算，各默认 60 分钟墙钟时间；等待和重试不暂停、不重置。长 DAG 没有额外的默认总时限；最后批次 Review 兼作最终 Review 时只使用一个时钟。
+- 未指定时，每个实现节点的收口时钟从第一版功能实现完成起算；此前记录 `deadline_at=PENDING_FIRST_IMPLEMENTATION`，触发时固定一次绝对 deadline，阶段内 Dev 换班继承该时钟。每个并行批次时钟从 Integrator 收到首个固定 `TASK_SHA` 起算，最终时钟从全部实现节点已通过或阻塞并进入整体收口起算，各默认 60 分钟墙钟时间。等待、重试和换班不暂停、不重置；长 DAG 没有额外的默认总时限；最后批次 Review 兼作最终 Review 时只使用一个时钟。
 - 不启动明显无法在剩余时间内安全结束的操作。到达 deadline 后停止所有可安全中断的工作，只允许完成保护数据/安全或保存可恢复 checkpoint 所必需的清理，并标记 `STOPPED_INCOMPLETE`。超时后不能新授予 pass 或“已完成”；超时前已取得的状态保留为历史证据，但不改变整体未完成结论。
 - 只有所有范围内节点完成、必需自动化通过、HTTP 不适用或 `HTTP_PASS` 对最终 fixed point 仍有效，且 `REVIEW_PASS` 对最终 fixed point 仍有效、没有已知可执行 P0-P3 时，才能声明交付完成。
 - 最终只汇总：范围与节点状态、关键文件、自动化及 HTTP 证据、checkpoint、Review 与修复、P0-P3、未完成/风险、commit/push/deploy/archive 状态。明确区分代码完成、测试通过、接口验收和上线完成。
