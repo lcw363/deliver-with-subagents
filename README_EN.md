@@ -12,6 +12,7 @@ A Codex skill for **development delivery after requirements are confirmed**. It 
 
 ## Guarantees
 
+- Functional closure comes first, required safety is built in, and extra hardening is risk-proportionate: complete the minimum production-ready main flow and necessary failure paths without expanding scope, stacking abstractions, or extending review indefinitely in pursuit of absolute safety or theoretical zero bugs.
 - Dev, Integrator, and Reviewer use fresh subagents without full-history inheritance. The main conversation retains only key decisions, states, SHAs, and evidence summaries.
 - Confirmed requirements are the write-scope ceiling. Implement only accepted behavior and inseparable minimal support; do not add adjacent features, contracts, migrations, or unrelated refactors without confirmation.
 - Every stage starts with a fresh Dev by default. Long stages predeclare safe checkpoint rotation points and use structured handoffs so multiple fresh Devs can continue the same development node sequentially; the old Dev is then retired.
@@ -20,7 +21,7 @@ A Codex skill for **development delivery after requirements are confirmed**. It 
 - Code-writing work is sequential by default. It runs in parallel only when dependencies, files, contracts, database/fixture/port resources, integration, and rollback are all proven independent. Shared files, unfrozen contracts, or shared data resources force sequential execution.
 - Exactly one active Dev writes the target worktree at a time during sequential work. Isolated worktrees and a single Integrator are used only for parallel batches.
 - Every stage creates a local checkpoint commit by default, without pushing, opening a PR, deploying, or archiving. If the user or project forbids commits, the skill uses a sequential snapshot mode.
-- TDD is conditional. The Dev simplifies and self-reviews the implementation before a fixed-checkpoint independent review. Every actionable P0-P3 finding is fixed and re-reviewed.
+- TDD is conditional. The Dev simplifies and self-reviews the implementation before a fixed-checkpoint independent review. P0-P3 findings introduced by the change, blocking acceptance, having a real failure path in the current scope, or affecting the current call chain and required safety are fixed and re-reviewed; only historical issues proven unrelated to the delivery and theoretical suggestions become residual risks.
 - New or changed HTTP APIs are called through the real route with sanitized, representative parameters. Mocks and schema checks do not replace endpoint acceptance.
 - Users may set a timebox or choose no time limit. By default, each implementation-node closeout, each parallel batch loop, and the final overall closeout receive 60 minutes. Rotating Devs within a stage does not reset that clock; expiry produces `STOPPED_INCOMPLETE`, never a false completion claim.
 
@@ -58,7 +59,7 @@ Use $subagent-delivery to deliver the 10 confirmed Wayfinder development stages:
 - infer dependencies and keep dispatching the next task; stay sequential unless modules are fully independent;
 - create an unpushed local checkpoint commit after each stage;
 - call new endpoints on the local service with a test account and real order parameters;
-- run a final independent review and close all P0-P3 findings; list unfinished work if the timebox expires.
+- run a final independent review and close actionable P0-P3 findings in the current delivery; list out-of-scope issues as residual risks and unfinished work if the timebox expires.
 ```
 
 See [SKILL.md](./SKILL.md) for the complete rules, [context-rotation.md](./references/context-rotation.md) for context rotation, [checkpoint-and-recovery.md](./references/checkpoint-and-recovery.md) for recovery, [model-routing.md](./references/model-routing.md) for model policy, and [evidence-and-briefs.md](./references/evidence-and-briefs.md) for briefs and test evidence.
